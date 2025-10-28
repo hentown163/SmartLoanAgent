@@ -2,18 +2,18 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated, requireRole } from "./replitAuth";
+import { setupLocalAuth, isAuthenticated, requireRole } from "./localAuth";
 import { insertLoanApplicationSchema, overrideDecisionSchema } from "@shared/schema";
 import { processLoanApplication } from "./agents";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
-  await setupAuth(app);
+  await setupLocalAuth(app);
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       res.json(user);
     } catch (error) {
@@ -25,7 +25,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Loan application routes
   app.post("/api/applications", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       
       // Validate request body
       const validatedData = insertLoanApplicationSchema.parse(req.body);
@@ -56,7 +56,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get borrower's own application
   app.get("/api/applications/my-application", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const applications = await storage.getLoanApplicationsByUser(userId);
       
       // Return the most recent application
@@ -103,7 +103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get agent states for an application
   app.get("/api/applications/:id/agents", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       const application = await storage.getLoanApplication(req.params.id);
 
@@ -127,7 +127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Override AI decision (loan officers only)
   app.post("/api/applications/:id/override", isAuthenticated, requireRole("loan_officer"), async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const validatedData = overrideDecisionSchema.parse(req.body);
 
       const application = await storage.getLoanApplication(req.params.id);

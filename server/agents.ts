@@ -4,7 +4,9 @@ import { storage } from "./storage";
 import type { LoanApplication } from "@shared/schema";
 
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = process.env.OPENAI_API_KEY 
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
 
 export interface AgentOrchestrationResult {
   finalDecision: string;
@@ -203,8 +205,11 @@ async function decisionExplainerAgent(
     agentStatus: "processing",
   });
 
-  // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
-  const prompt = `You are a loan underwriting AI system that generates compliant, human-readable explanations for loan decisions.
+  let explanation: string;
+
+  if (openai) {
+    // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
+    const prompt = `You are a loan underwriting AI system that generates compliant, human-readable explanations for loan decisions.
 
 Application Details:
 - Applicant: ${application.fullName}
@@ -231,13 +236,29 @@ Generate a clear, professional explanation for this ${riskAssessment.decision} d
 
 Format: Return ONLY the explanation text, no additional commentary.`;
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-5",
-    messages: [{ role: "user", content: prompt }],
-    max_completion_tokens: 300,
-  });
+    const response = await openai.chat.completions.create({
+      model: "gpt-5",
+      messages: [{ role: "user", content: prompt }],
+      max_completion_tokens: 300,
+    });
 
-  const explanation = response.choices[0].message.content || "Decision explanation unavailable.";
+    explanation = response.choices[0].message.content || "Decision explanation unavailable.";
+  } else {
+    // Fallback explanation when OpenAI is not available
+    const decisionText = riskAssessment.decision === "approved" 
+      ? "approved" 
+      : riskAssessment.decision === "rejected" 
+      ? "declined" 
+      : "escalated for manual review";
+    
+    explanation = `Based on our analysis, your application has been ${decisionText}. Your credit score of ${creditData.creditScore} and debt-to-income ratio of ${(creditData.dtiRatio * 100).toFixed(1)}% were key factors in this decision. ${
+      riskAssessment.decision === "approved" 
+        ? "Your strong financial profile meets our lending criteria." 
+        : riskAssessment.decision === "rejected"
+        ? "We encourage you to improve your credit score and reduce your debt-to-income ratio before reapplying."
+        : "A loan officer will review your application and contact you within 2-3 business days."
+    }`;
+  }
 
   const output = {
     explanation,
