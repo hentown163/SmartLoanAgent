@@ -164,7 +164,12 @@ export async function setupLocalAuth(app: Express) {
         if (err) {
           return res.status(500).json({ message: "Login failed" });
         }
-        return res.json({ message: "Login successful", user });
+        req.session.save((err) => {
+          if (err) {
+            return res.status(500).json({ message: "Session save failed" });
+          }
+          return res.json({ message: "Login successful", user });
+        });
       });
     })(req, res, next);
   });
