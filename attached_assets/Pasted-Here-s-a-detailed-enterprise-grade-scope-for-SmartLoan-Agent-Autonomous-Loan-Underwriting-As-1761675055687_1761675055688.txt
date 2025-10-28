@@ -1,0 +1,134 @@
+Here’s a **detailed enterprise-grade scope** for **SmartLoan Agent – Autonomous Loan Underwriting Assistant**, designed for production readiness, compliance, auditability, and RBAC (Role-Based Access Control). This scope can serve as your blueprint for building a prototype or MVP.
+
+---
+
+## 🏦 **Project Name**: SmartLoan Agent  
+**Domain**: Financial Services / Lending  
+**Objective**: Automate end-to-end loan underwriting with explainable, compliant, and secure AI-driven decisioning.
+
+---
+
+## 🔍 **Core Capabilities**
+
+### 1. **Multi-Agent Orchestration (LangGraph-based)**
+- **Document Parser Agent**:  
+  - Ingests PDFs, scanned images, bank statements, payslips.  
+  - Uses Azure Form Recognizer + custom ML models for structured extraction.  
+  - Outputs normalized JSON: `{income: 75000, employment_duration: "3y", debt_ratio: 0.35}`
+
+- **Credit Scoring Agent**:  
+  - Integrates with external bureaus (e.g., CIBIL via API) + internal behavioral data.  
+  - Computes dynamic credit score using rule-based + ML hybrid model (e.g., XGBoost).  
+  - Flags anomalies (e.g., income vs. lifestyle mismatch).
+
+- **Risk Assessor Agent**:  
+  - Evaluates risk tier (Low/Medium/High) using:  
+    - Debt-to-Income (DTI) ratio  
+    - Payment history  
+    - Employment stability  
+    - Collateral (if applicable)  
+  - Applies configurable risk policies (e.g., “Reject if DTI > 0.5”).
+
+- **Decision Explanation Agent**:  
+  - Generates human-readable rationale using LLM (e.g., Azure OpenAI):  
+    > “Loan approved: Strong credit history (score: 780), DTI ratio of 0.28, stable employment.”  
+  - Complies with **Regulation B (ECOA)** – no discriminatory language.
+
+---
+
+## 🛡️ **Enterprise-Grade Requirements**
+
+### ✅ **Security & Compliance**
+- **RBAC Implementation**:
+  | Role | Permissions |
+  |------|-------------|
+  | **Borrower** | Submit application, view status & explanation |
+  | **Loan Officer** | View assigned applications, override *only with justification*, add notes |
+  | **Underwriter (AI)** | Auto-decide (no human role) |
+  | **Compliance Auditor** | Full read-only access, audit trail export |
+  | **Admin** | Manage users, policies, model versions |
+
+- **Data Protection**:
+  - All PII encrypted at rest (Azure Blob Storage + CMK) and in transit (TLS 1.3).
+  - Secrets (API keys, DB creds) stored in **Azure Key Vault**.
+  - Zero raw document storage after parsing (retain only structured JSON + audit hash).
+
+- **Auditability**:
+  - Immutable log of:  
+    - Input documents (hash only)  
+    - Agent decisions at each stage  
+    - Final decision + explanation  
+    - Human overrides (with reason)  
+  - Logs stored in **Azure Log Analytics** with 7-year retention.
+
+### ✅ **Architecture**
+- **Frontend**: React (borrower portal) + Blazor (internal dashboard)
+- **Backend**:  
+  - **.NET Core 8**: Auth, RBAC, API gateway  
+  - **Python (FastAPI)**: Hosts agent orchestration (LangGraph), model inference  
+- **AI Layer**:  
+  - Azure OpenAI (GPT-4o) for explanations  
+  - Azure Machine Learning for credit scoring model  
+  - Azure AI Search for policy retrieval (RAG for rule lookup)
+- **Data**:  
+  - **Azure SQL DB**: Application metadata, user roles, decisions  
+  - **Cosmos DB**: Unstructured agent state (for LangGraph checkpoints)  
+  - **Blob Storage**: Temporary document upload (auto-delete after 1h)
+
+### ✅ **Workflow & Governance**
+- **Human-in-the-Loop (HITL)**:
+  - Auto-approve: Low-risk (score ≥ 750)  
+  - Auto-reject: High-risk (score ≤ 550 or policy violation)  
+  - **Escalate to Loan Officer**: Medium-risk (551–749)  
+- **Model Versioning**:  
+  - All models tracked via **Azure ML Model Registry**  
+  - A/B testing support for new scoring logic
+- **Explainability**:  
+  - SHAP/LIME for credit model  
+  - LLM-generated summary for end-user
+
+---
+
+## 📦 **Prototype Scope (MVP)**
+
+To build a **working prototype**, focus on:
+
+### ✅ **In Scope (MVP)**
+- Simulated document upload (PDF → JSON via mock parser)
+- Hardcoded credit logic (e.g., `if income > 50k and score > 700 → approve`)
+- LangGraph workflow: 4-agent chain with state passing
+- RBAC via Azure AD groups + .NET Core policy middleware
+- Decision explanation using Azure OpenAI (prompt-engineered)
+- Audit log to Azure SQL
+- React frontend: Borrower form + status view
+
+### ❌ **Out of Scope (MVP)**
+- Real CIBIL integration (use mock API)
+- Full SHAP explainability (use rule-based rationale)
+- Document scanning (assume pre-structured JSON input)
+- Kubernetes deployment (use Azure App Services)
+
+---
+
+## 🧪 **Success Metrics (Prototype)**
+- End-to-end decision in < 10 seconds
+- RBAC enforced (e.g., borrower can’t see other apps)
+- Audit trail complete for every run
+- Explanation is clear, non-discriminatory, and traceable to inputs
+
+---
+
+## 📁 **Deliverables for Prototype**
+1. GitHub repo with:
+   - `/backend-dotnet`: Auth, RBAC, API
+   - `/agents-python`: LangGraph workflow, FastAPI
+   - `/frontend-react`: Borrower portal
+2. Azure ARM/Bicep template for infra
+3. Postman collection for testing
+4. Architecture diagram (C4 model)
+
+---
+
+This scope aligns with **enterprise AI best practices** (governance, audit, RBAC) and leverages your strengths in **Azure, .NET, Python, LangChain/LangGraph, and GenAI**. It’s production-ready in design but scoped for a **2–4 week prototype**.
+
+Would you like a sample LangGraph agent flow code or RBAC policy template for .NET?
