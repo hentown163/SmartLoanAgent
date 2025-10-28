@@ -185,6 +185,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update user role (admins only)
+  app.patch("/api/admin/users/:id/role", isAuthenticated, requireRole("admin"), async (req: any, res) => {
+    try {
+      const { role } = req.body;
+      const validRoles = ["borrower", "loan_officer", "compliance_auditor", "admin"];
+      
+      if (!validRoles.includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+      
+      const user = await storage.updateUserRole(req.params.id, role);
+      res.json(user);
+    } catch (error) {
+      console.error("Error updating user role:", error);
+      res.status(500).json({ message: "Failed to update user role" });
+    }
+  });
+
+  // Get agent analytics (admins only)
+  app.get("/api/admin/agent-analytics", isAuthenticated, requireRole("admin"), async (req: any, res) => {
+    try {
+      const [agentStates, applications] = await Promise.all([
+        storage.getAllAgentStates(),
+        storage.getAllLoanApplications(),
+      ]);
+      
+      // Calculate agent performance metrics
+      const agentMetrics = {
+        document_parser: { total: 0, completed: 0, failed: 0, avgTime: 0 },
+        credit_scorer: { total: 0, completed: 0, failed: 0, avgTime: 0 },
+        risk_assessor: { total: 0, completed: 0, failed: 0, avgTime: 0 },
+        decision_explainer: { total: 0, completed: 0, failed: 0, avgTime: 0 },
+      };
+      
+      agentStates.forEach(state => {
+        const agent = state.agentName as keyof typeof agentMetrics;
+        if (agentMetrics[agent]) {
+          agentMetrics[agent].total++;
+          if (state.agentStatus === "completed") agentMetrics[agent].completed++;
+          if (state.agentStatus === "failed") agentMetrics[agent].failed++;
+          
+          if (state.startedAt && state.completedAt) {
+            const duration = new Date(state.completedAt).getTime() - new Date(state.startedAt).getTime();
+            agentMetrics[agent].avgTime += duration;
+          }
+        }
+      });
+      
+      // Calculate average times
+      Object.keys(agentMetrics).forEach(agent => {
+        const key = agent as keyof typeof agentMetrics;
+        if (agentMetrics[key].completed > 0) {
+          agentMetrics[key].avgTime = Math.round(agentMetrics[key].avgTime / agentMetrics[key].completed);
+        }
+      });
+      
+      // Decision analytics
+      const decisionStats = {
+        approved: applications.filter(a => a.status === "approved").length,
+        rejected: applications.filter(a => a.status === "rejected").length,
+        escalated: applications.filter(a => a.status === "escalated").length,
+        processing: applications.filter(a => a.status === "processing").length,
+      };
+      
+      // Risk tier distribution
+      const riskTierStats = {
+        low: applications.filter(a => a.riskTier === "low").length,
+        medium: applications.filter(a => a.riskTier === "medium").length,
+        high: applications.filter(a => a.riskTier === "high").length,
+      };
+      
+      res.json({
+        agentMetrics,
+        decisionStats,
+        riskTierStats,
+        recentAgentStates: agentStates.slice(0, 10),
+      });
+    } catch (error) {
+      console.error("Error fetching agent analytics:", error);
+      res.status(500).json({ message: "Failed to fetch agent analytics" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

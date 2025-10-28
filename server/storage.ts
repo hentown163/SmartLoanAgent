@@ -42,6 +42,12 @@ export interface IStorage {
     details?: any;
   }): Promise<AuditLog>;
   getAllAuditLogs(): Promise<AuditLog[]>;
+  
+  // User management operations
+  updateUserRole(userId: string, newRole: string): Promise<User>;
+  
+  // Agent analytics operations
+  getAllAgentStates(): Promise<AgentState[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -163,6 +169,21 @@ export class DatabaseStorage implements IStorage {
 
   async getAllAuditLogs(): Promise<AuditLog[]> {
     return await db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt));
+  }
+  
+  // User management operations
+  async updateUserRole(userId: string, newRole: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ role: newRole, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+  
+  // Agent analytics operations
+  async getAllAgentStates(): Promise<AgentState[]> {
+    return await db.select().from(agentStates).orderBy(desc(agentStates.createdAt));
   }
 }
 
