@@ -11,7 +11,10 @@ import { Badge } from "@/components/ui/badge";
 import { LogOut, FileText, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
 import { LoanApplicationForm } from "@/components/loan-application-form";
 import { AgentActivityTimeline } from "@/components/agent-activity-timeline";
+import { AnimatedAgentProgress } from "@/components/animated-agent-progress";
 import { DecisionCard } from "@/components/decision-card";
+import { LoanSimulator } from "@/components/loan-simulator";
+import { PersonalizedTips } from "@/components/personalized-tips";
 
 export default function BorrowerDashboard() {
   const { toast } = useToast();
@@ -198,11 +201,35 @@ export default function BorrowerDashboard() {
               {/* Agent Activity Timeline */}
               {agentStates && agentStates.length > 0 && (
                 <div className="border-t border-border pt-6">
-                  <h3 className="text-sm font-medium mb-4">Agent Processing Activity</h3>
-                  <AgentActivityTimeline agentStates={agentStates} />
+                  <h3 className="text-sm font-medium mb-4">AI Agents Processing Your Application</h3>
+                  <AnimatedAgentProgress agentStates={agentStates} />
                 </div>
               )}
             </Card>
+
+            {/* What-If Simulator and Personalized Tips */}
+            {application.status === "processing" && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <LoanSimulator 
+                  initialData={{
+                    loanAmount: application.loanAmount,
+                    annualIncome: application.annualIncome,
+                    monthlyDebt: application.monthlyDebt,
+                    employmentDuration: application.employmentDuration,
+                    employmentStatus: application.employmentStatus,
+                  }}
+                />
+                <PersonalizedTips 
+                  formData={{
+                    annualIncome: application.annualIncome,
+                    monthlyDebt: application.monthlyDebt,
+                    employmentDuration: application.employmentDuration,
+                    employmentStatus: application.employmentStatus,
+                    loanAmount: application.loanAmount,
+                  }}
+                />
+              </div>
+            )}
 
             {/* Decision Card */}
             {application.finalDecision && application.aiExplanation && (

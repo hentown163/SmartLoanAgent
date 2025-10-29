@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
+import { HealthScoreCard } from "./health-score-card";
 
 interface LoanApplicationFormProps {
   onSuccess?: () => void;
@@ -70,8 +71,13 @@ export function LoanApplicationForm({ onSuccess }: LoanApplicationFormProps) {
     mutation.mutate(data);
   };
 
+  const formData = form.watch();
+
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+    <div className="space-y-8">
+      <HealthScoreCard formData={formData} />
+      
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
       {/* Personal Information */}
       <div>
         <h3 className="text-lg font-medium mb-4">Personal Information</h3>
@@ -282,6 +288,7 @@ export function LoanApplicationForm({ onSuccess }: LoanApplicationFormProps) {
           )}
         </Button>
       </div>
-    </form>
+      </form>
+    </div>
   );
 }

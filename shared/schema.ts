@@ -79,6 +79,9 @@ export const loanApplications = pgTable("loan_applications", {
   overrideReason: text("override_reason"),
   overriddenAt: timestamp("overridden_at"),
   
+  // Document tracking for gap detection
+  documents: jsonb("documents"),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -177,3 +180,54 @@ export type LoanApplication = typeof loanApplications.$inferSelect;
 export type AgentState = typeof agentStates.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type OverrideDecision = z.infer<typeof overrideDecisionSchema>;
+
+// Document tracking types
+export type DocumentType = "payslip" | "bank_statement" | "id_proof" | "address_proof" | "employment_letter";
+
+export interface DocumentMetadata {
+  type: DocumentType;
+  name: string;
+  uploadedAt: string;
+  status: "validated" | "missing" | "incomplete";
+}
+
+// Health score response
+export interface HealthScoreResult {
+  score: number;
+  maxScore: number;
+  factors: {
+    category: string;
+    impact: number;
+    suggestion: string;
+  }[];
+  missingDocuments: string[];
+}
+
+// Loan simulation request/response
+export const loanSimulationSchema = z.object({
+  loanAmount: z.string(),
+  annualIncome: z.string(),
+  monthlyDebt: z.string(),
+  employmentDuration: z.string(),
+  employmentStatus: z.string(),
+});
+
+export interface LoanSimulationResult {
+  approvalChance: number;
+  riskTier: string;
+  estimatedEmi: number;
+  creditScore: number;
+  dtiRatio: number;
+  recommendation: string;
+}
+
+export type LoanSimulationRequest = z.infer<typeof loanSimulationSchema>;
+
+// Personalized tips response
+export interface PersonalizedTip {
+  id: string;
+  category: "documents" | "income" | "debt" | "employment" | "general";
+  title: string;
+  description: string;
+  impact: "high" | "medium" | "low";
+}
